@@ -60,6 +60,12 @@ class BaseEventTypeController extends BaseController
 		return false;
 	}
 
+	/**
+	 * standard access rules for events
+	 *
+	 * @return array
+	 *
+	 */
 	public function accessRules()
 	{
 		return array(
@@ -85,21 +91,37 @@ class BaseEventTypeController extends BaseController
 		return BaseController::checkUserLevel(3);
 	}
 
+	/**
+	 * renders event metadata
+	 */
 	public function renderEventMetadata()
 	{
 		$this->renderPartial('//patient/event_metadata');
 	}
 
+	/**
+	 * index action
+	 */
 	public function actionIndex()
 	{
 		$this->render('index');
 	}
 
+	/**
+	 * @see parent::printActions()
+	 */
 	public function printActions()
 	{
 		return array('print');
 	}
 
+	/**
+	 * Automatically include js and css asset files for a module
+	 *
+	 * @param CAction $action
+	 * @return bool
+	 * @throws CHttpException
+	 */
 	protected function beforeAction($action)
 	{
 		// Set asset path
@@ -134,8 +156,6 @@ class BaseEventTypeController extends BaseController
 				}
 			}
 		}
-
-		parent::storeData();
 
 		$this->firm = Firm::model()->findByPk($this->selectedFirmId);
 
@@ -271,6 +291,14 @@ class BaseEventTypeController extends BaseController
 		}
 	}
 
+	/**
+	 * Action for creating an event. Will render a form, or process a submitted form (rendering validation errors
+	 * or redirecting to the view of the succcessfully created event)
+	 *
+	 * @return bool|string
+	 * @throws CHttpException
+	 * @throws Exception
+	 */
 	public function actionCreate()
 	{
 		$this->event_type = EventType::model()->find('class_name=?', array($this->getModule()->name));

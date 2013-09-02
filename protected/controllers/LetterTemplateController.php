@@ -46,8 +46,6 @@ class LetterTemplateController extends BaseController
 			throw new CHttpException(403, 'You are not permitted to administrate letter templates.');
 		}
 
-		$this->storeData();
-
 		$this->firm = Firm::model()->findByPk($this->selectedFirmId);
 
 		return parent::beforeAction($action);

@@ -17,6 +17,12 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html The GNU General Public License V3.0
  */
 
+/**
+ * Class SiteAndFirmWidget
+ *
+ * Form widget for popup selection of site and firm for the user
+ *
+ */
 class SiteAndFirmWidget extends CWidget
 {
 	public $title = 'Please confirm Site and Firm';
@@ -25,6 +31,10 @@ class SiteAndFirmWidget extends CWidget
 	public $patient;
 	public $returnUrl;
 
+	/**
+	 * gets the request URL and stores it for the return after submit
+	 *
+	 */
 	public function init()
 	{
 		if (!$this->returnUrl) {
@@ -32,6 +42,12 @@ class SiteAndFirmWidget extends CWidget
 		}
 	}
 
+	/**
+	 * run the widget - will set the session appropriately if the form has been submitted, otherwise will set it up
+	 * and render
+	 *
+	 * @throws CException
+	 */
 	public function run()
 	{
 		$model = new SiteAndFirmForm();
@@ -47,9 +63,8 @@ class SiteAndFirmWidget extends CWidget
 				$user->audit('user', 'change-firm', $user->last_firm_id);
 
 				Yii::app()->session['selected_site_id'] = $model->site_id;
-				$this->controller->selectedSiteId = $model->site_id;
 				Yii::app()->session['selected_firm_id'] = $model->firm_id;
-				$this->controller->selectedFirmId = $model->firm_id;
+				$this->controller->resetSiteAndFirm();
 				Yii::app()->session['confirm_site_and_firm'] = false;
 
 				Yii::app()->event->dispatch('firm_changed', array('firm_id' => $model->firm_id));
@@ -62,14 +77,13 @@ class SiteAndFirmWidget extends CWidget
 						$episode->id => 1,
 					);
 				}
-				
+
 				if(!isset($episode) && isset($this->patient)) {
 					$this->controller->redirect(array("/patient/".$this->patient->id));
 				}
-				else
-				{
-				// Redirect browser to clear POST
-				$this->controller->redirect($this->returnUrl);
+				else {
+					// Redirect browser to clear POST
+					$this->controller->redirect($this->returnUrl);
 				}
 				Yii::app()->end();
 			}

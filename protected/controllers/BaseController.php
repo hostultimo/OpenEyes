@@ -24,14 +24,87 @@
 
 class BaseController extends Controller
 {
-	public $selectedFirmId;
-	public $selectedSiteId;
-	public $firms;
-	public $showForm = false;
-	public $patientId;
-	public $patientName;
 	public $jsVars = array();
 	protected $css = array();
+
+	protected $selected_firm_id;
+	protected $selected_site_id;
+	protected $patient_id;
+	protected $patient_name;
+	protected $_firms;
+	/**
+	 * return the id of the currently selected firm
+	 *
+	 * @return int|null
+	 */
+	public function getSelectedFirmId()
+	{
+		if (!$this->selected_firm_id) {
+			$this->selected_firm_id = Yii::app()->session->get('selected_firm_id');
+		}
+		return $this->selected_firm_id;
+	}
+
+	/**
+	 * returns the id of the currently selected site
+	 *
+	 * @return int|null
+	 */
+	public function getSelectedSiteId()
+	{
+		if (!$this->selected_site_id) {
+			$this->selected_site_id = Yii::app()->session->get('selected_site_id');
+		}
+		return $this->selected_site_id;
+	}
+
+	/**
+	 * resets the site and firm stored on the controller
+	 */
+	public function resetSiteAndFirm()
+	{
+		$this->selected_site_id = null;
+		$this->selected_firm_id = null;
+	}
+
+	/**
+	 * returns list of firm ids for the current user
+	 *
+	 * @return array
+	 */
+	public function getFirms()
+	{
+		if (!$this->_firms) {
+			$this->_firms = Yii::app()->session->get('firms');
+		}
+		return $this->_firms;
+	}
+
+	/**
+	 * return the id of the currently selected patient
+	 *
+	 * @return int|null
+	 */
+	public function getPatientId()
+	{
+		if (!$this->patient_id) {
+			$this->patient_id = Yii::app()->session->get('patient_id');
+		}
+		return $this->patient_id;
+	}
+
+	/**
+	 * return the name of the currently selected patient
+	 *
+	 * @return string|null
+	 */
+	public function getPatientName()
+	{
+		if (!$this->patient_name) {
+			$this->patient_name = Yii::app()->session->get('patient_name');
+		}
+		return $this->patient_name;
+	}
 
 	/**
 	 * Check to see if user's level is high enough
@@ -48,14 +121,21 @@ class BaseController extends Controller
 	}
 
 	/**
-	 * Set default rules to block everyone apart from admin
-	 * These should be overridden in child classes
+	 * use the accessControl filter by default for all actions
+	 *
 	 * @return array
+	 * @see parent::filters()
 	 */
 	public function filters()
 	{
 		return array('accessControl');
 	}
+
+	/**
+	 * Set default rules to block everyone apart from admin
+	 * These should be overridden in child classes
+	 * @return array
+	 */
 	public function accessRules()
 	{
 		return array(
@@ -68,6 +148,11 @@ class BaseController extends Controller
 		);
 	}
 
+	/**
+	 * override of parent to use our defined access rules
+	 *
+	 * @param CFilterChain $filterChain
+	 */
 	public function filterAccessControl($filterChain)
 	{
 		$filter = new CAccessControlFilter;
@@ -75,6 +160,12 @@ class BaseController extends Controller
 		$filter->filter($filterChain);
 	}
 
+	/**
+	 * creates array of access rules, always allowing access to admin, denying access to anonymous users, and
+	 * then using the class accessRules method for other users.
+	 *
+	 * @return array
+	 */
 	protected function compileAccessRules()
 	{
 		// Always allow admin
@@ -127,6 +218,14 @@ class BaseController extends Controller
 		return array();
 	}
 
+	/**
+	 * set up css registration and various controller properties based on the session
+	 *
+	 * @param CAction $action
+	 * @return bool
+	 *
+	 * @see parent::beforeAction($action)
+	 */
 	protected function beforeAction($action)
 	{
 		// Register base style.css unless it's a print action
@@ -145,21 +244,6 @@ class BaseController extends Controller
 				$app->session['patient_id'] = 1;
 				$app->session['patient_name'] = 'John Smith';
 			}
-		}
-
-		if (isset($app->session['firms']) && count($app->session['firms'])) {
-			$this->showForm = true;
-
-			$this->firms = $app->session['firms'];
-			$this->selectedFirmId = $app->session['selected_firm_id'];
-		}
-
-		if (isset($app->session['selected_site_id'])) {
-			$this->selectedSiteId = $app->session['selected_site_id'];
-		}
-
-		if (isset($app->session['patient_name'])) {
-			$this->patientName = $app->session['patient_name'];
 		}
 
 		$this->registerCssFiles();
@@ -197,28 +281,26 @@ class BaseController extends Controller
 	 * a different tab. As such the patient id has to be reset to prevent problems
 	 * such an event being assigned to the wrong patient.
 	 *
-	 * This code is much like that in PatientController->actionView.
-	 *
-	 * @param int $patientId
+	 * @param int $patient_id
 	 */
-	public function resetSessionPatient($patientId)
+	public function resetSessionPatient($patient_id)
 	{
-		$patient = Patient::model()->findByPk($patientId);
+		$patient = Patient::model()->findByPk($patient_id);
 
 		if (empty($patient)) {
 			throw new Exception('Invalid patient id provided.');
 		}
 
 		$this->setSessionPatient($patient);
-
-		if (isset(Yii::app()->session['patient_id'])) {
-			$this->patientId = Yii::app()->session['patient_id'];
-		}
-		if (isset(Yii::app()->session['patient_name'])) {
-			$this->patientName = Yii::app()->session['patient_name'];
-		}
+		$this->patient_id = null;
+		$this->patient_name = null;
 	}
 
+	/**
+	 * Update session patient information with the given Patient object
+	 *
+	 * @param Patient $patient
+	 */
 	protected function setSessionPatient($patient)
 	{
 		$app = Yii::app();
@@ -226,47 +308,11 @@ class BaseController extends Controller
 		$app->session['patient_name'] = $patient->title . ' ' . $patient->first_name . ' ' . $patient->last_name;
 	}
 
-	public function checkPatientId()
-	{
-		$app = Yii::app();
-
-		if (Yii::app()->params['ab_testing']) {
-			if (Yii::app()->user->isGuest) {
-				$identity=new UserIdentity('admin', 'admin');
-				$identity->authenticate();
-				Yii::app()->user->login($identity,0);
-				$this->selectedFirmId = 1;
-				$app->session['patient_id'] = 1;
-				$app->session['patient_name'] = 'John Smith';
-			}
-			$app->session['patient_id'] = 1;
-			$app->session['patient_name'] = 'John Smith';
-		}
-
-		if (isset($app->session['patient_id'])) {
-			$this->patientId = $app->session['patient_id'];
-			$this->patientName = $app->session['patient_name'];
-		} else {
-			throw new CHttpException(403, 'You are not authorised to perform this action.');
-		}
-	}
-
-	public function storeData()
-	{
-		$app = Yii::app();
-
-		if (!empty($app->session['firms'])) {
-			$this->showForm = true;
-
-			$this->firms = $app->session['firms'];
-			$this->selectedFirmId = $app->session['selected_firm_id'];
-		}
-
-		if (isset($app->session['patient_name'])) {
-			$this->patientName = $app->session['patient_name'];
-		}
-	}
-
+	/**
+	 * log user activity
+	 *
+	 * @param $message
+	 */
 	public function logActivity($message)
 	{
 		$addr = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
@@ -274,12 +320,24 @@ class BaseController extends Controller
 		Yii::log($message . ' from ' . $addr, "user", "userActivity");
 	}
 
+	/**
+	 * Ensures js vars are process before rendering
+	 *
+	 * @param string $view
+	 * @return bool
+	 *
+	 * @see parent::beforeRender($view)
+	 *
+	 */
 	protected function beforeRender($view)
 	{
 		$this->processJsVars();
 		return parent::beforeRender($view);
 	}
 
+	/**
+	 * iterates through controller js vars and creates appropriate script to define the values in the rendered page.
+	 */
 	public function processJsVars()
 	{
 		$this->jsVars['YII_CSRF_TOKEN'] = Yii::app()->request->csrfToken;
