@@ -147,7 +147,7 @@ class BaseActiveRecord extends CActiveRecord
 				$properties[$field] = $this->{$field};
 			}
 		}
-
+		error_log(">>>>" . print_r($properties, true));
 		if ($data === null) {
 			$data = $this->getAuditAttributes();
 		}

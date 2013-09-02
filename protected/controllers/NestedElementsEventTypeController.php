@@ -40,8 +40,14 @@ class NestedElementsEventTypeController extends BaseEventTypeController
 		return parent::beforeAction($action);
 	}
 
-	/*
+	/**
 	 * abstraction of element initialisation to allow custom extension in overrides of controller
+	 *
+	 * @param ElementType $element_type
+	 * @param int $previous_id
+	 * @param array() $additional
+	 *
+	 * return BaseEventTypeElement $element
 	 */
 	protected function getElementForElementForm($element_type, $previous_id = 0, $additional)
 	{
@@ -297,7 +303,7 @@ class NestedElementsEventTypeController extends BaseEventTypeController
 				$criteria->compare('event_type_id',$event_type_id);
 				$criteria->order = 'display_order asc';
 				$criteria->compare('parent_element_type_id', $parent_type->id);
-				
+
 				$elements = array();
 				foreach (ElementType::model()->findAll($criteria) as $element_type) {
 					$pcrit = new CDBCriteria;
@@ -451,7 +457,7 @@ class NestedElementsEventTypeController extends BaseEventTypeController
 		foreach ($this->getChildDefaultElements($parent_class, $action, false, false, $previous_parent_id) as $default_element) {
 			$default_element_types[] = get_class($default_element);
 		}
-		
+
 		if ($event = $this->event) {
 			$parent = ElementType::model()->find( array('condition' => 'class_name = :name and event_type_id = :eid', 'params' => array(':name'=>$parent_class, ':eid' => $event->event_type_id)) );
 		} else {

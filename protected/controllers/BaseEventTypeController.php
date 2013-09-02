@@ -168,7 +168,9 @@ class BaseEventTypeController extends BaseController
 	}
 
 	/**
-	 * Get all the elements for an event, the current module or an event_type
+	 * Get all the elements that are required for the current action, based on the event type and submitted values in
+	 * $_POST. Note it does not set attributes on the elements from $_POST.
+	 *
 	 * @param string $action
 	 * @param int $event_type_id
 	 * @param Event $event
@@ -220,6 +222,9 @@ class BaseEventTypeController extends BaseController
 						$keys = array_keys($value);
 
 						if (is_array($value[$keys[0]])) {
+							// this handles a form which is submitting multiple instances of the same element
+							// NOTE: not entirely clear whether we have any use cases for this, and it may actually
+							// be premature optimisation
 							if (isset($event->event_type_id)) {
 								foreach ($element_class::model()->findAll(array('condition'=>'event_id=?','params'=>array($event->id),'order'=>'id asc')) as $element) {
 									$elements[] = $element;
@@ -341,34 +346,25 @@ class BaseEventTypeController extends BaseController
 				throw new Exception('Invalid firm id on attempting to create event.');
 			}
 		}
-		$elements = $this->getDefaultElements('create', $this->event_type->id);
-
-		if (empty($_POST) && !count($elements)) {
-			throw new CHttpException(403, 'Gadzooks!	I got me no elements!');
-		}
 
 		if (!empty($_POST) && isset($_POST['cancel'])) {
 			$this->redirect(array('/patient/view/'.$this->patient->id));
 			return;
-		} elseif (!empty($_POST) && !count($elements)) {
+		}
+
+		$elements = $this->getDefaultElements('create', $this->event_type->id);
+
+		if (empty($_POST) && !count($elements)) {
+			// this is a module setup error
+			throw new CHttpException(403, 'Gadzooks!	I got me no elements!');
+		}
+
+		if (!empty($_POST) && !count($elements)) {
 			$errors['Event'][] = 'No elements selected';
 		} elseif (!empty($_POST)) {
 
-			$elements = array();
-			$element_names = array();
-
-			foreach (ElementType::model()->findAll('event_type_id=?',array($this->event_type->id)) as $element_type) {
-				if (isset($_POST[$element_type->class_name])) {
-					$elements[] = new $element_type->class_name;
-					$element_names[$element_type->class_name] = $element_type->name;
-				}
-			}
-
-			$elementList = array();
-
 			// validation
 			$errors = $this->validatePOSTElements($elements);
-
 
 			// creation
 			if (empty($errors)) {
@@ -421,7 +417,7 @@ class BaseEventTypeController extends BaseController
 		$this->processJsVars();
 		$this->renderPartial(
 			'create',
-			array('elements' => $this->getDefaultElements('create'), 'eventId' => null, 'errors' => @$errors),
+			array('elements' => $elements, 'eventId' => null, 'errors' => @$errors),
 			// processOutput is true so that the css/javascript from the event_header.php are processed when rendering the view
 			false, true
 		);
@@ -530,7 +526,7 @@ class BaseEventTypeController extends BaseController
 
 			if ($firms[$firmId]) {
 				$session['selected_firm_id'] = $firmId;
-				$this->selectedFirmId = $firmId;
+				$this->resetSiteAndFirm();
 				$this->firm = Firm::model()->findByPk($this->selectedFirmId);
 			} else {
 				// They've supplied a firm id in the post to which they are not entitled??
@@ -663,18 +659,22 @@ class BaseEventTypeController extends BaseController
 		);
 	}
 
-	/*
+	/**
 	 * Use this for any many to many relations defined on your elements. This is called prior to validation
 	 * so should set values without actually touching the database. To do that, the createElements and updateElements
 	 * methods should be extended to handle the POST values.
+	 *
+	 * @param BaseEventTypeElement $element
 	 */
 	protected function setPOSTManyToMany($element)
 	{
 		// placeholder function
 	}
 
-	/*
+	/**
 	 * Uses the POST values to define elements and their field values without hitting the db, and then performs validation
+	 *
+	 * @param BaseEventTypeElement[] $elements
 	 */
 	protected function validatePOSTElements($elements)
 	{
