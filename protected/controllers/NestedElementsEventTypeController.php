@@ -222,9 +222,11 @@ class NestedElementsEventTypeController extends BaseEventTypeController
 
 	/**
 	 * returns the default elements to be displayed - ignoring elements which have parents (child elements)
+	 *
+	 * @param
 	 * @see BaseEventTypeController::getDefaultElements()
 	 */
-	public function getDefaultElements($action, $event_type_id = false, $event = false)
+	public function getDefaultElements($action, $event_type_id = null, $event = null)
 	{
 		if (!$event && isset($this->event)) {
 			$event = $this->event;
@@ -382,7 +384,6 @@ class NestedElementsEventTypeController extends BaseEventTypeController
 	 * @param integer $event_type_id
 	 * @return array
 	 */
-
 	protected function getCleanDefaultElements($event_type_id)
 	{
 		$criteria = new CDbCriteria;

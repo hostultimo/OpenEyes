@@ -59,7 +59,8 @@ class BaseController extends Controller
 	}
 
 	/**
-	 * resets the site and firm stored on the controller
+	 * resets the site and firm stored on the controller (session setting should be handled outside of this)
+	 *
 	 */
 	public function resetSiteAndFirm()
 	{
@@ -88,6 +89,7 @@ class BaseController extends Controller
 	public function getPatientId()
 	{
 		if (!$this->patient_id) {
+			error_log(print_r(array_keys(Yii::app()->session->getKeys()), true));
 			$this->patient_id = Yii::app()->session->get('patient_id');
 		}
 		return $this->patient_id;
@@ -303,6 +305,7 @@ class BaseController extends Controller
 	 */
 	protected function setSessionPatient($patient)
 	{
+		error_log('setting patient in session' . $patient->id);
 		$app = Yii::app();
 		$app->session['patient_id'] = $patient->id;
 		$app->session['patient_name'] = $patient->title . ' ' . $patient->first_name . ' ' . $patient->last_name;
